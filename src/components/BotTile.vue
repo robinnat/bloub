@@ -3,6 +3,7 @@ import BloubBot from '@/components/BloubBot.vue'
 import { DEFAULT_EXPRESSION } from '@/bot/expressions'
 import { DEFAULT_COLOR, DEFAULT_SHAPE } from '@/bot/skins'
 import type { StateId } from '@/bot/states'
+import type { RenduId, TaillePixelId } from '@/ui/rendu'
 
 /**
  * Vignette cliquable de la barre de droite : un bot fige, son nom dessous, une
@@ -23,13 +24,18 @@ withDefaults(
     color?: string
     expression?: string
     size?: number
+    /** absent : le style courant, comme toutes les vignettes */
+    rendu?: RenduId
+    pixel?: TaillePixelId
   }>(),
   {
     state: 'idle',
     shape: DEFAULT_SHAPE,
     color: DEFAULT_COLOR,
     expression: DEFAULT_EXPRESSION,
-    size: 60
+    size: 60,
+    rendu: undefined,
+    pixel: undefined
   }
 )
 </script>
@@ -49,6 +55,8 @@ withDefaults(
       :color="color"
       :expression="expression"
       :frozen-at="frozenAt"
+      :rendu="rendu"
+      :pixel="pixel"
     />
     <!-- 12 px : en dessous, une legende n'est plus lisible pour tout le monde -->
     <span class="text-center text-xs leading-tight text-[var(--muted)]">{{ label }}</span>

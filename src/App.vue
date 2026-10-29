@@ -45,6 +45,17 @@ import { HUMEURS } from '@/ui/gaze'
 import { INTRO, INTRO_GAZE, POSE_AT, introDue } from '@/ui/intro'
 import { ecris, lis, type NomStocke } from '@/ui/stockage'
 import {
+  estRendu,
+  estTaillePixel,
+  pixelCourant,
+  PIXEL_DEFAUT,
+  RENDU_DEFAUT,
+  renduCourant,
+  suffixeRendu,
+  type RenduId,
+  type TaillePixelId
+} from '@/ui/rendu'
+import {
   blockAt,
   blocksWith,
   defaultCycle,
@@ -449,6 +460,33 @@ watch(color, (v) => ecris('couleur', v))
 watch(expression, (v) => ecris('expression', v))
 
 /**
+ * Style de rendu et taille des pixels, persistes comme le reste. Ils sont aussi poses sur
+ * `renduCourant` / `pixelCourant`, que suit tout bot affiche sans style explicite :
+ * vignettes, timeline, planche. Le moteur ne change pas, seul le dessin.
+ */
+const rendu = ref<RenduId>(stored('style', RENDU_DEFAUT, estRendu) as RenduId)
+const pixel = ref<TaillePixelId>(stored('pixel', PIXEL_DEFAUT, estTaillePixel) as TaillePixelId)
+renduCourant.value = rendu.value
+pixelCourant.value = pixel.value
+watch(rendu, (v) => {
+  renduCourant.value = v
+  ecris('style', v)
+})
+watch(pixel, (v) => {
+  pixelCourant.value = v
+  ecris('pixel', v)
+})
+
+/** Ce que porte un bot exporte : la meme chose qu'a l'ecran, style compris. */
+const reglagesBot = () => ({
+  shape: shape.value,
+  color: color.value,
+  expression: expression.value,
+  rendu: rendu.value,
+  pixel: pixel.value
+})
+
+/**
  * Nom du produit, en capitales pour le grand mot du pied de page. PAS traduit —
  * c'est une marque. Les capitales sont un logotype propre a ce pied de page : en
  * prose le nom s'ecrit « bloub », tout en minuscules, et c'est cette forme que
@@ -595,7 +633,7 @@ async function exporteCycle() {
   const images = cycleImages(totalDuration(blocs), format)
   const pas = cyclePas(format)
   const taille = CYCLE_TAILLE[format]
-  const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+  const reglages = reglagesBot()
   const suit = (fait: number, total: number) => (avancementCycle.value = fait / total)
 
   avancementCycle.value = 0
@@ -679,16 +717,22 @@ async function exporte(id: ActionId, confirme = false) {
   clearTimeout(confirmation)
   etatExport.value = 'occupe'
   const nom = () =>
-    nomFichier(shape.value, expression.value, color.value, action.extension, action.suffixe)
+    nomFichier(
+      shape.value,
+      expression.value,
+      color.value,
+      action.extension,
+      [suffixeRendu(rendu.value), action.suffixe].filter(Boolean).join('-')
+    )
   try {
     if (action.mode === 'anime') {
       // L'animation ne part PAS du SVG affiche : elle est rejouee depuis le debut
       // sur une instance hors ecran. Cf. `sequenceDuBot`.
-      const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+      const reglages = reglagesBot()
       telecharge(await versSvgAnime(reglages, action.taille, ANIM_IMAGES, ANIM_PAS), nom())
       etatExport.value = 'exporte'
     } else if (action.mode === 'gif') {
-      const reglages = { shape: shape.value, color: color.value, expression: expression.value }
+      const reglages = reglagesBot()
       const fond = couleurDeFond(fondGif.value)
       telecharge(await versGifAnime(reglages, action.taille, GIF_IMAGES, GIF_PAS, fond), nom())
       etatExport.value = 'exporte'
@@ -972,6 +1016,8 @@ watch(
             v-model:shape="shape"
             v-model:color="color"
             v-model:expression="expression"
+            v-model:rendu="rendu"
+            v-model:pixel="pixel"
           />
         </template>
       </aside>

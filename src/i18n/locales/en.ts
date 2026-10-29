@@ -27,7 +27,9 @@ const en: typeof fr = {
     animations: 'Animation',
     shape: 'Shape',
     expression: 'Expression',
-    color: 'Colour'
+    color: 'Colour',
+    style: 'Style',
+    pixelSize: 'Pixel size'
   },
 
   export: {
@@ -130,6 +132,19 @@ const en: typeof fr = {
     burst: 'Burst',
     comet: 'Comet',
     swirl: 'Swirl'
+  },
+
+  styles: {
+    original: 'Original',
+    pixel: 'Pixel art',
+    argile: '3D clay',
+    bulle: '3D bubble'
+  },
+
+  pixelSizes: {
+    gros: 'Large',
+    moyen: 'Medium',
+    fin: 'Fine'
   },
 
   shapes: {

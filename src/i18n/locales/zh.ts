@@ -32,7 +32,9 @@ const zh: typeof fr = {
     animations: '动画',
     shape: '形状',
     expression: '表情',
-    color: '颜色'
+    color: '颜色',
+    style: '风格',
+    pixelSize: '像素大小'
   },
 
   export: {
@@ -133,6 +135,19 @@ const zh: typeof fr = {
     burst: '爆散',
     comet: '彗星',
     swirl: '漩涡'
+  },
+
+  styles: {
+    original: '原版',
+    pixel: '像素风',
+    argile: '3D 黏土',
+    bulle: '3D 气泡'
+  },
+
+  pixelSizes: {
+    gros: '大',
+    moyen: '中',
+    fin: '小'
   },
 
   shapes: {

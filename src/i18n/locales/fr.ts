@@ -44,7 +44,9 @@ export default {
     animations: 'Animation',
     shape: 'Forme',
     expression: 'Expression',
-    color: 'Couleur'
+    color: 'Couleur',
+    style: 'Style',
+    pixelSize: 'Taille des pixels'
   },
 
   /**
@@ -155,6 +157,19 @@ export default {
     burst: 'Éclatement',
     comet: 'Comète',
     swirl: 'Tourbillon'
+  },
+
+  styles: {
+    original: 'Original',
+    pixel: 'Pixel art',
+    argile: '3D argile',
+    bulle: '3D bulle'
+  },
+
+  pixelSizes: {
+    gros: 'Gros',
+    moyen: 'Moyens',
+    fin: 'Fins'
   },
 
   shapes: {
