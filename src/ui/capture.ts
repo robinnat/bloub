@@ -13,8 +13,17 @@
 import { createApp, h, nextTick, ref } from 'vue'
 import BloubBot from '@/components/BloubBot.vue'
 import type { Block } from '@/bot/cycles'
-import { gifAnime, gifIndexe, indexe, nouvellePalette, recense, svgAnime } from './anime'
+import {
+  gifAnime,
+  gifIndexe,
+  indexe,
+  nouvellePalette,
+  recense,
+  svgAnime,
+  svgFeuilletage
+} from './anime'
 import { arrete, DEMI_ECRAN, sansCommentaires, viewBoxExport } from './export'
+import type { RenduId, TaillePixelId } from './rendu'
 
 /**
  * Serialise le SVG affiche en un document autonome, recadre sur la boule.
@@ -246,6 +255,9 @@ export interface ReglagesBot {
   shape: string
   color: string
   expression: string
+  /** style de rendu ; absent, le style courant de l'ecran */
+  rendu?: RenduId
+  pixel?: TaillePixelId
 }
 
 /**
@@ -400,11 +412,23 @@ export async function versSvgAnime(
   pas: number
 ): Promise<Blob> {
   let base = ''
-  const matrices = await sequenceDuBot(reglages, taille, nombre, pas, (svg, i) => {
+  const images = await sequenceDuBot(reglages, taille, nombre, pas, (svg, i) => {
     if (i === 0) base = svgAutonome(svg, taille)
-    return matricesDesYeux(svg)
+    // pixel art : pas d'yeux a matrices, chaque image est un jeu de cases
+    const pixels = svg.querySelector('[data-pixels]')
+    return { matrices: matricesDesYeux(svg), pixels: pixels ? pixels.innerHTML : null }
   })
-  const markup = svgAnime(base, matrices, +((nombre - 1) * pas).toFixed(3))
+  const markup = images.every((im) => im.pixels !== null)
+    ? svgFeuilletage(
+        base,
+        images.map((im) => sansCommentaires(im.pixels!)),
+        +(nombre * pas).toFixed(3)
+      )
+    : svgAnime(
+        base,
+        images.map((im) => im.matrices),
+        +((nombre - 1) * pas).toFixed(3)
+      )
   return new Blob([markup], { type: 'image/svg+xml' })
 }
 

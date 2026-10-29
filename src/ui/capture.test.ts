@@ -157,3 +157,56 @@ describe('lecteur hors ecran', () => {
     }
   })
 })
+
+/**
+ * Le style de rendu ne change que le DESSIN : le moteur rend la meme image, donc le masque
+ * des yeux doit etre identique en original et en 3D — c'est lui que lit l'export anime.
+ */
+describe('style de rendu', () => {
+  async function monte(props: Record<string, unknown>) {
+    const { createApp, h, nextTick } = await import('vue')
+    const BloubBot = (await import('@/components/BloubBot.vue')).default
+    const hote = document.createElement('div')
+    document.body.appendChild(hote)
+    const app = createApp({ render: () => h(BloubBot, { ...REGLAGES, size: TAILLE, frozenAt: 1, ...props }) })
+    app.mount(hote)
+    await nextTick()
+    const svg = hote.querySelector('svg')!
+    return { svg, ferme: () => (app.unmount(), hote.remove()) }
+  }
+
+  it("laisse l'original sans degrade ni filtre", async () => {
+    const { svg, ferme } = await monte({ rendu: 'original' })
+    expect(svg.querySelector('radialGradient')).toBeNull()
+    expect(svg.querySelector('filter')).toBeNull()
+    expect(svg.querySelector('[data-pixels]')).toBeNull()
+    ferme()
+  })
+
+  for (const rendu of ['argile', 'bulle']) {
+    it(`${rendu} : volume, ombre portee, et les memes yeux que l'original`, async () => {
+      const original = await monte({ rendu: 'original' })
+      const yeux = yeuxDe(original.svg)
+      const corps = corpsDe(original.svg)
+      original.ferme()
+
+      const { svg, ferme } = await monte({ rendu })
+      expect(svg.querySelector('radialGradient')).not.toBeNull()
+      expect(svg.querySelectorAll('filter').length).toBeGreaterThanOrEqual(3)
+      // un seul masque, le premier du document : l'export anime le lit
+      expect(svg.querySelectorAll('mask').length).toBe(1)
+      expect(yeuxDe(svg)).toEqual(yeux)
+      expect(corpsDe(svg)).toBe(corps)
+      // aucune couleur en variable CSS : le SVG exporte doit rester autoporteur
+      expect(svg.outerHTML).not.toContain('var(--')
+      ferme()
+    })
+  }
+
+  it('retombe sur le rendu original quand le navigateur ne sait pas pixelliser', async () => {
+    // happy-dom n'a pas de canvas 2D : le pixel art doit afficher l'original, pas un vide
+    const { svg, ferme } = await monte({ rendu: 'pixel' })
+    if (!svg.querySelector('[data-pixels]')) expect(svg.querySelector('mask')).not.toBeNull()
+    ferme()
+  })
+})

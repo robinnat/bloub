@@ -75,6 +75,56 @@ export function svgAnime(base: string, matrices: string[][], duree: number): str
   return base.replace(mask[0], maskAnime).replace('</svg>', `${style}</svg>`)
 }
 
+/**
+ * Animation exportee du rendu PIXEL ART : un feuilletage, pas une interpolation.
+ *
+ * Le pixel art n'a pas d'yeux a matrices : chaque image est un jeu de cases, et
+ * interpoler entre deux grilles n'a pas de sens. On empile donc les images dans des
+ * calques et on n'en montre qu'un a la fois (`step-end`, aucune transition). Les images
+ * identiques qui se suivent sont fusionnees : au repos, les yeux ne changent de case que
+ * de loin en loin, et la plupart des images sont des doublons.
+ *
+ * `alternate` comme pour l'original : la derive du regard n'est pas periodique, et un
+ * aller-retour reboucle sans couture. `.p0` reste visible sans animation CSS, pour qu'un
+ * lecteur qui ne les joue pas montre au moins la premiere image.
+ */
+export function svgFeuilletage(base: string, images: string[], duree: number): string {
+  if (images.length < 2) throw new Error('il faut au moins deux images')
+  const calque = base.match(/(<g[^>]*data-pixels="1"[^>]*>)([\s\S]*?)(<\/g>)/)
+  if (!calque) throw new Error('calque pixel introuvable')
+
+  const n = images.length
+  const segments: { contenu: string; debut: number; fin: number }[] = []
+  images.forEach((contenu, i) => {
+    const dernier = segments[segments.length - 1]
+    if (dernier && dernier.contenu === contenu) dernier.fin = i + 1
+    else segments.push({ contenu, debut: i, fin: i + 1 })
+  })
+
+  const pc = (i: number) => +((i / n) * 100).toFixed(3)
+  const regles = segments.map((s, k) => {
+    const debut = pc(s.debut)
+    const fin = pc(s.fin)
+    const entree = debut > 0 ? `0%{opacity:0}${debut}%{opacity:1}` : '0%{opacity:1}'
+    const sortie = fin < 100 ? `${fin}%{opacity:0}100%{opacity:0}` : '100%{opacity:1}'
+    return `@keyframes p${k}{${entree}${sortie}}`
+  })
+
+  const style =
+    '<style>' +
+    `.p{opacity:0;animation-duration:${duree}s;animation-iteration-count:infinite;` +
+    'animation-timing-function:step-end;animation-direction:alternate}' +
+    '.p0{opacity:1}' +
+    segments.map((_, k) => `.p${k}{animation-name:p${k}}`).join('') +
+    regles.join('') +
+    '</style>'
+
+  const contenu = segments.map((s, k) => `<g class="p p${k}">${s.contenu}</g>`).join('')
+  return base
+    .replace(calque[0], `${calque[1]}${contenu}${calque[3]}`)
+    .replace('</svg>', `${style}</svg>`)
+}
+
 /* ------------------------------------------------------------------- gif */
 
 /**

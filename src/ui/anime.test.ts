@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gifAnime, svgAnime } from './anime'
+import { gifAnime, svgAnime, svgFeuilletage } from './anime'
 
 /** SVG minimal ayant la structure de celui de BloubBot : corps + deux yeux. */
 const BASE =
@@ -315,5 +315,43 @@ describe('aller-retour du LZW', () => {
     expect(decode).toHaveLength(cote * cote)
     // aucun index transparent : tout est opaque
     expect(decode!.every((v) => v > 0)).toBe(true)
+  })
+})
+
+/** SVG minimal du rendu pixel : un seul calque de cases, sans masque. */
+const BASE_PIXEL =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-125 -125 250 250">' +
+  '<g data-pixels="1" shape-rendering="crispEdges"><path d="M0 0h1v1h-1z" fill="#000"/></g>' +
+  '</svg>'
+
+describe('svg anime du pixel art', () => {
+  const A = '<path d="M0 0h1v1h-1z" fill="#000"/>'
+  const B = '<path d="M1 0h1v1h-1z" fill="#000"/>'
+  const sortie = svgFeuilletage(BASE_PIXEL, [A, A, A, B], 2)
+
+  it('fusionne les images identiques qui se suivent', () => {
+    // quatre images, deux differentes : deux calques seulement
+    expect(sortie.match(/class="p p\d+"/g)!.length).toBe(2)
+  })
+
+  it('montre chaque calque sur sa tranche de temps, sans interpolation', () => {
+    expect(sortie).toContain('@keyframes p0{0%{opacity:1}75%{opacity:0}100%{opacity:0}}')
+    expect(sortie).toContain('@keyframes p1{0%{opacity:0}75%{opacity:1}100%{opacity:1}}')
+    expect(sortie).toContain('animation-timing-function:step-end')
+  })
+
+  it('reboucle en aller-retour comme l export anime original', () => {
+    expect(sortie).toContain('animation-direction:alternate')
+    expect(sortie).toContain('animation-duration:2s')
+  })
+
+  it("montre la premiere image quand l'animation CSS n'est pas lue", () => {
+    expect(sortie).toContain('.p{opacity:0')
+    expect(sortie).toContain('.p0{opacity:1')
+  })
+
+  it('refuse ce qu il ne sait pas animer', () => {
+    expect(() => svgFeuilletage(BASE_PIXEL, [A], 2)).toThrow()
+    expect(() => svgFeuilletage('<svg></svg>', [A, B], 2)).toThrow()
   })
 })
