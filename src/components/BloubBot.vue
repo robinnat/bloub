@@ -19,6 +19,16 @@ import {
 import { blockAt, defaultCycle, offsetOf, type Block } from '@/bot/cycles'
 import { DEMI_VIEWBOX, RAYON } from '@/bot/repere'
 import { STATE_BY_ID, type StateId } from '@/bot/states'
+import { pixellise } from '@/ui/pixel'
+import {
+  est3d,
+  grillePixel,
+  pixelEffectif,
+  renduEffectif,
+  teintes3d,
+  type RenduId,
+  type TaillePixelId
+} from '@/ui/rendu'
 
 const props = withDefaults(
   defineProps<{
@@ -55,6 +65,15 @@ const props = withDefaults(
      * ici c'est le script qui decide de tout, y compris de sa duree.
      */
     gaze?: GazeScript | null
+    /**
+     * Style de rendu : original, pixel art, 3D argile ou 3D bulle. Seul le DESSIN
+     * change, le moteur rend la meme image. Absent, le bot suit le reglage courant
+     * (`renduCourant`), ce qui evite de descendre la prop dans chaque vignette ; les
+     * exports le passent toujours explicitement.
+     */
+    rendu?: RenduId
+    /** Taille des pixels du pixel art ; absente, le reglage courant. */
+    pixel?: TaillePixelId
   }>(),
   {
     size: 320,
@@ -65,7 +84,9 @@ const props = withDefaults(
     frozenAt: undefined,
     cycle: () => defaultCycle().blocks,
     follow: false,
-    gaze: null
+    gaze: null,
+    rendu: undefined,
+    pixel: undefined
   }
 )
 
@@ -91,10 +112,30 @@ const shapeRadii = computed(() => SHAPE_BY_ID.get(props.shape)?.radii ?? null)
 const ink = computed(() => COLOR_BY_ID.get(props.color)?.hex ?? '#0a0a0c')
 const expression = computed(() => EXPRESSION_BY_ID.get(props.expression) ?? null)
 
+/* ------------------------------------------------------------- style de rendu */
+
+const rendu = computed(() => renduEffectif(props.rendu))
+const grille = computed(() => grillePixel(pixelEffectif(props.pixel)))
+/** Teintes du volume, ou null hors 3D douce. */
+const t3d = computed(() => {
+  const r = rendu.value
+  return est3d(r) ? teintes3d(ink.value, r) : null
+})
+const argile = computed(() => rendu.value === 'argile')
+
 const engine = new BotEngine(R, state.value, shapeRadii.value, expression.value)
 const frame = shallowRef<BotFrame>(engine.sample(props.frozenAt ?? 0))
 const uid = Math.random().toString(36).slice(2, 8)
 const maskId = `bot-mask-${uid}`
+
+/**
+ * L'image courante en pixel art : re-pixellisee a chaque image du moteur, ce qui garde le
+ * morphing fluide. `null` hors pixel art, ou quand le navigateur n'a pas de canvas : le
+ * gabarit retombe alors sur le rendu original plutot que de ne rien montrer.
+ */
+const pixels = computed(() =>
+  rendu.value === 'pixel' ? pixellise(frame.value, ink.value, props.paper, grille.value) : null
+)
 
 let raf = 0
 let nextAt = Infinity
@@ -491,6 +532,15 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
     role="img"
     :aria-label="t('app.botAria')"
   >
+    <!--
+      Pixel art : l'image du moteur rasterisee sur une grille basse resolution, un
+      chemin par couleur. `crispEdges` garde des cases nettes a toute taille, y compris
+      quand l'export la rasterise a 1024 px.
+    -->
+    <g v-if="pixels" data-pixels="1" shape-rendering="crispEdges">
+      <path v-for="(c, i) in pixels" :key="i" :d="c.d" :fill="c.fill" />
+    </g>
+    <template v-else>
     <defs>
       <!--
         Les yeux sont de vrais trous perces dans le corps (comme sur x.ai), pas
@@ -540,6 +590,56 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
           :stop-color="c"
         />
       </linearGradient>
+
+      <!--
+        3D douce. Tout reste dans le SVG (degrades et filtres), donc les exports le
+        serialisent et le rasterisent tel quel. Le masque des yeux reste le PREMIER
+        masque du document et les seules formes a matrice y sont les yeux : c'est ce que
+        lit l'export anime.
+      -->
+      <template v-if="t3d">
+        <!-- volume : lumiere en haut a gauche -->
+        <radialGradient
+          :id="`${uid}-vol`"
+          gradientUnits="userSpaceOnUse"
+          cx="-28"
+          cy="-38"
+          r="172"
+          fx="-46"
+          fy="-58"
+        >
+          <stop offset="0" :stop-color="t3d.clair" />
+          <stop :offset="argile ? 0.5 : 0.44" :stop-color="t3d.base" />
+          <stop offset="1" :stop-color="t3d.ombre" />
+        </radialGradient>
+        <filter :id="`${uid}-flou`" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur :stdDeviation="argile ? 6 : 8" />
+        </filter>
+        <filter :id="`${uid}-creux`" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" />
+        </filter>
+        <filter :id="`${uid}-reflet`" x="-100%" y="-100%" width="300%" height="300%">
+          <feGaussianBlur :stdDeviation="argile ? 13 : 6" />
+        </filter>
+        <!-- ombre interne legere : le bord bas droit s'assombrit vers l'interieur -->
+        <filter :id="`${uid}-interne`" x="-10%" y="-10%" width="120%" height="120%">
+          <feComponentTransfer in="SourceAlpha" result="inverse">
+            <feFuncA type="table" tableValues="1 0" />
+          </feComponentTransfer>
+          <feOffset in="inverse" :dx="argile ? -7 : -5" :dy="argile ? -10 : -7" result="decale" />
+          <feGaussianBlur in="decale" :stdDeviation="argile ? 10 : 5" result="flou" />
+          <feComposite in="flou" in2="SourceAlpha" operator="in" result="bord" />
+          <feFlood :flood-color="t3d.ombre" :flood-opacity="argile ? 0.7 : 0.45" />
+          <feComposite in2="bord" operator="in" result="teinte" />
+          <feMerge>
+            <feMergeNode in="SourceGraphic" />
+            <feMergeNode in="teinte" />
+          </feMerge>
+        </filter>
+        <clipPath :id="`${uid}-clip`">
+          <path :d="frame.bodyPath" />
+        </clipPath>
+      </template>
     </defs>
 
     <!-- moitie arriere des orbites : dessinee avant le corps, donc occultee -->
@@ -565,6 +665,15 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
     </g>
 
     <g :opacity="frame.bodyAlpha">
+      <!-- 3D : ombre portee, coloree et floue, sous la forme -->
+      <path
+        v-if="t3d"
+        :d="frame.bodyPath"
+        :fill="t3d.portee"
+        :opacity="argile ? 0.36 : 0.4"
+        :transform="argile ? 'translate(0 8)' : 'translate(0 6)'"
+        :filter="`url(#${uid}-flou)`"
+      />
       <!--
         Fond opaque a la forme exacte du corps, sous le corps lui-meme.
 
@@ -580,7 +689,56 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         rendrait plus clairs que le fond, ce qui se verrait sur une grande boule.
       -->
       <path :d="frame.bodyPath" :fill="props.paper" />
-      <g :mask="`url(#${maskId})`">
+      <!--
+        3D : profondeur des yeux. Le corps perce, decale vers le bas a droite et flou,
+        n'est visible qu'a travers les trous : il y pose l'ombre du rebord haut gauche,
+        comme dans un creux. Meme masque que le corps, donc il suit les yeux, y compris
+        dans l'export anime.
+      -->
+      <g v-if="t3d" :clip-path="`url(#${uid}-clip)`">
+        <g transform="translate(3 5)" :filter="`url(#${uid}-creux)`">
+          <g :mask="`url(#${maskId})`">
+            <rect
+              :x="-VB"
+              :y="-VB"
+              :width="VB * 2"
+              :height="VB * 2"
+              :fill="t3d.ombre"
+              opacity="0.5"
+            />
+          </g>
+        </g>
+      </g>
+      <!-- l'ombre interne se calcule sur la forme PERCEE, donc hors du masque -->
+      <g v-if="t3d" :filter="`url(#${uid}-interne)`">
+        <g :mask="`url(#${maskId})`">
+          <rect :x="-VB" :y="-VB" :width="VB * 2" :height="VB * 2" :fill="`url(#${uid}-vol)`" />
+          <!-- reflet : large et doux sur l'argile, net et vif sur la bulle -->
+          <ellipse
+            :cx="argile ? -34 : -40"
+            :cy="argile ? -46 : -54"
+            :rx="argile ? 48 : 30"
+            :ry="argile ? 32 : 17"
+            fill="#ffffff"
+            :opacity="argile ? 0.22 : 0.8"
+            transform="rotate(-32 -40 -52)"
+            :filter="`url(#${uid}-reflet)`"
+          />
+          <!-- lumiere renvoyee par le sol, en bas a droite : seulement la bulle -->
+          <ellipse
+            v-if="!argile"
+            cx="34"
+            cy="62"
+            rx="44"
+            ry="20"
+            fill="#ffffff"
+            opacity="0.1"
+            transform="rotate(-32 34 62)"
+            :filter="`url(#${uid}-reflet)`"
+          />
+        </g>
+      </g>
+      <g v-else :mask="`url(#${maskId})`">
         <rect :x="-VB" :y="-VB" :width="VB * 2" :height="VB * 2" :fill="ink" />
       </g>
     </g>
@@ -613,5 +771,6 @@ function dotAttrs(dot: BotFrame['dots'][number]) {
         :opacity="arc.opacity"
       />
     </g>
+    </template>
   </svg>
 </template>
