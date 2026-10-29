@@ -26,7 +26,8 @@ only gate, so run `pnpm build` before you call something done.
 ## What's in it
 
 The rail on the left switches between three views. **Customise** offers 8 body
-shapes, 12 colours and 16 rest expressions, kept between visits. **Animations** is
+shapes, 12 colours, 16 rest expressions and 4 render styles (original, pixel art,
+3D clay, 3D bubble), kept between visits. **Animations** is
 a small editor: arrange states into a timeline, set how long each is held, save the
 result. **Settings** holds the language (French, English or Chinese) and the
 credits.
@@ -79,6 +80,7 @@ the DOM-less test suite possible.
 | [docs/interface.md](docs/interface.md) | Layout, the three-column scene, CSS traps |
 | [docs/export.md](docs/export.md) | Exporting to SVG, PNG, GIF and MP4 |
 | [docs/i18n.md](docs/i18n.md) | The hand-rolled translation layer |
+| [docs/styles.md](docs/styles.md) | Render styles: pixel art, soft 3D (clay, bubble) |
 
 ## Using the component
 
