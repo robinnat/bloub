@@ -39,13 +39,18 @@ describe('accessoires', () => {
     }
   })
 
-  it('le geste fait regarder vers l objet (en bas a droite) et laisse la place', () => {
+  it('le geste fait regarder vers l objet sans changer la taille ni la place du corps (echelleCorps 1)', () => {
     for (const a of ACCESSOIRES) {
       for (const t of temps) {
         const g = a.geste(t)
         expect(g.yaw).toBeGreaterThan(5)
-        expect(g.dx).toBeLessThan(0)
-        expect(g.sx).toBeLessThan(1)
+        expect(Math.abs(g.dx)).toBeLessThan(0.001)
+        expect(Math.abs(g.sx - 1)).toBeLessThan(0.02)
+        expect(Math.abs(g.sy - 1)).toBeLessThan(0.03)
+        const r = a.geste(t, { echelleCorps: 0.84 })
+        expect(r.sx).toBeLessThan(g.sx)
+        expect(r.dx).toBeLessThan(0)
+        expect(a.geste(t, { echelleCorps: 1 })).toEqual(g)
         expect(Number.isFinite(g.dx + g.dy + g.sx + g.sy + g.yaw + g.pitch + g.roll + g.lid)).toBe(true)
       }
     }

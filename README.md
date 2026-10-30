@@ -60,8 +60,9 @@ is byte-identical. Details (in French) in [docs/gestes.md](docs/gestes.md).
 matte clay style: a notebook and a pencil writing line by line, a laptop with scrolling
 coloured code and typing hands, a clapperboard, a bar chart under a magnifier, a paper
 plane that leaves and comes back, a canvas and a brush, a clipboard ticking itself, a
-list read with a magnifier, a gear. Each prop comes with a gesture (the avatar steps
-aside and looks at it). `dessin(t, options)` returns SVG text in the engine's frame;
+list read with a magnifier, a gear. Each prop comes with a gesture (the avatar looks
+at it); the body keeps its exact resting size and place, the prop sits in front of it
+(`echelleCorps` option to shrink the body instead). `dessin(t, options)` returns SVG text in the engine's frame;
 `simple: true` drops fine details for tiny sizes. Details (in French) in
 [docs/accessoires.md](docs/accessoires.md).
 

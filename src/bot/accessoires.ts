@@ -50,12 +50,23 @@ export interface DessinOptions {
   simple?: boolean
 }
 
+export interface GesteOptions {
+  /**
+   * echelle du corps sous accessoire (1 par defaut = taille de repos). Sous 1, le corps rapetisse
+   * et se range en haut a gauche pour laisser plus de place a l'objet.
+   */
+  echelleCorps?: number
+}
+
 export interface Accessoire {
   id: AccessoireId
   /** duree de la boucle, en secondes */
   boucle: number
-  /** geste de l'avatar qui travaille avec l'objet (il le regarde) */
-  geste: (t: number) => Geste
+  /**
+   * geste de l'avatar qui travaille avec l'objet (il le regarde). Par defaut le corps garde
+   * EXACTEMENT sa taille et sa place de repos (`echelleCorps` 1) : c'est l'objet qui s'adapte.
+   */
+  geste: (t: number, o?: GesteOptions) => Geste
   /** l'objet, en SVG texte, a dessiner PAR-DESSUS le corps */
   dessin: (t: number, o: DessinOptions) => string
 }
@@ -117,24 +128,26 @@ const coche = (x: number, y: number, k: number, f: number, epaisseur: number) =>
   trait(`M${n(x - 4 * k)} ${n(y)}l${n(3 * k)} ${n(3 * k)}l${n(6 * k)} ${n(-7 * k)}`, 14 * k, f, O.vert, epaisseur)
 
 /**
- * Regard vers l'objet, en bas a droite : le corps rapetisse un peu et remonte a gauche pour lui
- * laisser la place. `yaw`, `pitch`, `roll` sont des visees (degres, renforcees pour se lire en
- * petit) ; `dx`, `dy` s'ajoutent au decalage ; `sx`, `sy` multiplient la reduction.
+ * Regard vers l'objet, en bas a droite. Le corps ne bouge pas (taille et place de repos) :
+ * `yaw`, `pitch`, `roll` sont des visees (degres, renforcees pour se lire en petit) ; `dx`, `dy`,
+ * `sx`, `sy` ne portent que le petit mouvement du metier (frappe, hochement).
  */
 const versObjet = (p: Partial<Geste> = {}) =>
-  g({
-    ...p,
-    dx: -0.2 + (p.dx ?? 0),
-    dy: -0.13 + (p.dy ?? 0),
-    sx: 0.84 * (p.sx ?? 1),
-    sy: 0.84 * (p.sy ?? 1),
-    yaw: 1.15 * (p.yaw ?? 18),
-    pitch: 1.3 * (p.pitch ?? 14),
-    roll: p.roll ?? 3
-  })
+  g({ ...p, yaw: 1.15 * (p.yaw ?? 18), pitch: 1.3 * (p.pitch ?? 14), roll: p.roll ?? 3 })
 
-/** Place des objets : dessines autour de (100, 105), agrandis et ramenes vers le centre. */
-const PLACE = 'translate(-62 -62) scale(1.4)'
+/** Reduction facultative du corps (`echelleCorps` < 1) : il rapetisse et se range en haut a gauche. */
+const avecEchelle = (geste: Geste, o?: GesteOptions): Geste => {
+  const e = clamp(o?.echelleCorps ?? 1, 0.5, 1)
+  if (e === 1) return geste
+  return { ...geste, sx: geste.sx * e, sy: geste.sy * e, dx: geste.dx - 1.25 * (1 - e), dy: geste.dy - 0.8 * (1 - e) }
+}
+
+/**
+ * Place des objets : dessines autour de (100, 105), poses DEVANT l'avatar en bas a droite, hors
+ * du visage (rien de sombre sous les yeux), en leger chevauchement avec le bas du corps et en
+ * debordant un peu du cadre (le client laisse le SVG deborder : `overflow: visible`).
+ */
+const PLACE = 'translate(-8 -12) scale(1.3)'
 
 /** Loupe : anneau mat, verre teinte tres leger, manche. */
 const loupe = (o: DessinOptions, x: number, y: number, r: number) =>
@@ -527,7 +540,9 @@ const engrenage: Accessoire = {
   }
 }
 
-export const ACCESSOIRES: Accessoire[] = [carnet, portable, clap, graphique, avion, palette, pressePapiers, liste, engrenage]
+export const ACCESSOIRES: Accessoire[] = [carnet, portable, clap, graphique, avion, palette, pressePapiers, liste, engrenage].map(
+  (a): Accessoire => ({ ...a, geste: (t, o) => avecEchelle(a.geste(t), o) })
+)
 
 export const ACCESSOIRE_BY_ID = new Map(ACCESSOIRES.map((a) => [a.id, a]))
 

@@ -2,8 +2,13 @@
 
 `src/bot/accessoires.ts` pose devant un avatar AU TRAVAIL un petit objet animé, dessiné en
 code dans le style 3D argile mat (dégradés doux, ombre portée floue, aucun reflet brillant),
-et le geste qui va avec : l'avatar rapetisse un peu, se range en haut à gauche et regarde son
-objet en bas à droite.
+et le geste qui va avec : l'avatar regarde son objet, en bas à droite.
+
+Le corps garde EXACTEMENT sa taille et sa place de repos : c'est l'objet qui s'adapte. Il est
+posé devant, au premier plan, en léger chevauchement avec le bas du corps et en débordant un
+peu du cadre (le client met `overflow: visible` sur le SVG). Rien de sombre n'est posé sous les
+yeux, pour qu'un objet ne se lise jamais comme une bouche. Option `geste(t, { echelleCorps })` :
+1 par défaut ; sous 1, le corps rapetisse et se range en haut à gauche pour laisser plus de place.
 
 ```ts
 import { BotEngine } from './engine'
