@@ -219,7 +219,8 @@ export const ACTIVITES: Activite[] = [
     boucle: 2.4,
     geste: (t) => {
       const tap = Math.max(0, Math.sin((t / 0.22) * TAU)) * (0.6 + 0.4 * Math.sin((t / 1.7) * TAU) ** 2)
-      return g({ pitch: 14, yaw: 6 * loopNoise(t, 3.1, 0.5), dy: 0.012 * tap, sy: 1 - 0.012 * tap })
+      // amplitude choisie pour rester visible a 48 px (une frappe = 3 % du rayon)
+      return g({ pitch: 16, yaw: 7 * loopNoise(t, 3.1, 0.5), dy: 0.03 * tap, sx: 1 + 0.015 * tap, sy: 1 - 0.03 * tap })
     }
   },
   // lecture : le regard balaie de gauche a droite, ligne apres ligne
