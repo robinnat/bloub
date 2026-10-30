@@ -5,6 +5,14 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Optional gesture layer** (`src/bot/gestes.ts`, `docs/gestes.md`): seeded idle gestures
+  every 4 to 12 s with a per-seed personality, a bounce on touch, sleep and failure
+  postures, seven working activities. `engine.sample(t, geste)` takes it as an optional
+  second argument; without it the frame is byte-identical (tested).
+- `tools/moteur.ts`: engine-only entry point (no Vue) to bundle the engine for another page.
+
 ### Fixed
 
 - **The Settings and Animations views were unusable below 64rem.** Everything stacks

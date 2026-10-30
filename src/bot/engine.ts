@@ -13,6 +13,7 @@ import {
   type Silhouette
 } from './shape'
 import { STATE_BY_ID, type Pose, type StateDef, type StateId } from './states'
+import type { Geste } from './gestes'
 
 export interface RenderedEye {
   d: string
@@ -421,7 +422,11 @@ export class BotEngine {
     if (STATE_BY_ID.get(id)?.blinkIn) this.blinkAt = now
   }
 
-  sample(now: number): BotFrame {
+  /**
+   * `geste` (facultatif, `gestes.ts`) : petits ecarts AJOUTES apres la pose mesuree (deplacement,
+   * echelles, visee, paupiere). Sans geste, l'image est identique a l'octet pres a celle d'avant.
+   */
+  sample(now: number, geste?: Geste): BotFrame {
     const R = this.scale
     const def = STATE_BY_ID.get(this.cur)!
     const shape = this.shapeAtTime(now)
@@ -467,27 +472,28 @@ export class BotEngine {
       // `Look`), et le tour se retranche en chemin. La derive s'ajoute APRES le
       // melange, sinon la cible l'annulerait en meme temps que la pose — or elle
       // doit survivre a une tete tournee sans pointeur.
-      yaw: lerp(pose.gaze.yaw, look.yaw, look.mix) + life.dYaw - look.spin,
-      pitch: lerp(pose.gaze.pitch, look.pitch, look.mix) + life.dPitch,
+      yaw: lerp(pose.gaze.yaw, look.yaw, look.mix) + life.dYaw - look.spin + (geste ? geste.yaw : 0),
+      pitch: lerp(pose.gaze.pitch, look.pitch, look.mix) + life.dPitch + (geste ? geste.pitch : 0),
       // le roulis, lui, ne suit rien : la tete du bot est penchee de -13deg dans
       // la video, et la faire rouler avec le curseur casse cette signature
-      roll: pose.gaze.roll + life.dRoll
+      roll: pose.gaze.roll + life.dRoll + (geste ? geste.roll : 0)
     }
 
     // clignement declenche par le changement d'etat, en plus du calendrier
     const forced = clamp((now - this.blinkAt) / 0.2)
     const forcedLid = forced < 1 ? Math.abs(forced * 2 - 1) : 1
-    const lid = Math.min(life.lid, forcedLid)
+    const lid = geste ? Math.min(life.lid, forcedLid, geste.lid) : Math.min(life.lid, forcedLid)
 
-    const offX = pose.offX + life.driftX
-    const offY = pose.offY + life.driftY
+    const offX = pose.offX + life.driftX + (geste ? geste.dx : 0)
+    const offY = pose.offY + life.driftY + (geste ? geste.dy : 0)
 
     // --- corps ------------------------------------------------------------
     const sil: Silhouette = {
       ...pose.sil,
       cx: pose.sil.cx + offX,
       cy: pose.sil.cy + offY,
-      sy: pose.sil.sy * life.breath
+      sx: geste ? pose.sil.sx * geste.sx : pose.sil.sx,
+      sy: geste ? pose.sil.sy * life.breath * geste.sy : pose.sil.sy * life.breath
     }
     const bodyPath = closedPath(toPoints(sil, R, this.pts))
 

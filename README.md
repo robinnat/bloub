@@ -43,6 +43,17 @@ Two URLs are worth knowing:
 
 ![The 14 states, frozen side by side](docs/states.png)
 
+### Gestures (optional layer)
+
+`src/bot/gestes.ts` adds small, seeded animations on top of the measured poses, so a
+group of avatars doesn't move as one: varied idle gestures every 4 to 12 s (blink,
+breath, hop, sway, look around, nod, stretch) with a per-seed personality, a bounce on
+touch, sleep and failure postures, and seven "working" activities built on the engine's
+states. They only apply when passed to `engine.sample(t, geste)`; without one, the frame
+is byte-identical. Details (in French) in [docs/gestes.md](docs/gestes.md).
+
+![Gestures, activities, sleep, failure, bounce](docs/gestes.png)
+
 ## Why the numbers look arbitrary
 
 They're measured, not chosen. The reference video was cut at 10 fps and each
