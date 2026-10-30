@@ -54,6 +54,19 @@ is byte-identical. Details (in French) in [docs/gestes.md](docs/gestes.md).
 
 ![Gestures, activities, sleep, failure, bounce](docs/gestes.png)
 
+### Job accessories (optional layer)
+
+`src/bot/accessoires.ts` gives a working avatar a small animated prop drawn in code, in the
+matte clay style: a notebook and a pencil writing line by line, a laptop with scrolling
+coloured code and typing hands, a clapperboard, a bar chart under a magnifier, a paper
+plane that leaves and comes back, a canvas and a brush, a clipboard ticking itself, a
+list read with a magnifier, a gear. Each prop comes with a gesture (the avatar steps
+aside and looks at it). `dessin(t, options)` returns SVG text in the engine's frame;
+`simple: true` drops fine details for tiny sizes. Details (in French) in
+[docs/accessoires.md](docs/accessoires.md).
+
+![Job accessories, three moments each](docs/accessoires.png)
+
 ## Why the numbers look arbitrary
 
 They're measured, not chosen. The reference video was cut at 10 fps and each

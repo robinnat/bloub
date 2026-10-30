@@ -12,6 +12,11 @@ Versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   postures, seven working activities. `engine.sample(t, geste)` takes it as an optional
   second argument; without it the frame is byte-identical (tested).
 - `tools/moteur.ts`: engine-only entry point (no Vue) to bundle the engine for another page.
+- **Job accessories** (`src/bot/accessoires.ts`, `docs/accessoires.md`): nine animated props
+  drawn in code (notebook, laptop, clapperboard, chart, paper plane, palette, clipboard,
+  list, gear), each with its gesture, a job-to-prop map and a `simple` mode for tiny sizes.
+  The detached hands take the idea and proportions of the hands proposed in PR 20 of
+  jeremy-prt/bloub (Efrain Chiri Nina).
 
 ### Fixed
 

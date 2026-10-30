@@ -26,3 +26,10 @@ export {
   tempsActivite,
   zSommeil
 } from '../src/bot/gestes'
+export {
+  ACCESSOIRES,
+  ACCESSOIRE_BY_ID,
+  ACCESSOIRE_DE_METIER,
+  TEINTES_OBJETS,
+  accessoireDuMetier
+} from '../src/bot/accessoires'
